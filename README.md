@@ -4,21 +4,21 @@ This is code snippet to process parallel payment on marketplace using the paypal
 
 npm install
 
-# run
+## run
 
 node app.js
 
 
-# Process flow
+## Process flow
 
-1. SetExpressCheckout
+1 SetExpressCheckout
 
 Getting the Token
 
-2. GetExpressCheckoutDetails
+2 GetExpressCheckoutDetails
 
 Getting the PayerId
 
-3. DoExpressCheckoutPayment
+3 DoExpressCheckoutPayment
 
 Payment process
