@@ -1,7 +1,14 @@
 'use strict';
+var myPaypal = require('paypal-nvp-api');
+let config = {
+	mode: 'sandbox',
+	track: 'https://www.sandbox.paypal.com',
+	username: '...',
+	password: '...',
+	signature: '...'
+};
+let myPay = myPaypal(config);
 
-var paypal = require('paypal-rest-sdk');
-var config = {};
 
 // Routes
 
@@ -10,77 +17,59 @@ exports.index = function (req, res) {
 };
 
 exports.create = function (req, res) {
-	var method = req.param('method');
 
-	var payment = {
-		"intent": "sale",
-		"payer": {
-		},
-		"transactions": [{
-			"amount": {
-				"currency": req.param('currency'),
-				"total": req.param('amount')
-			},
-			"description": req.param('description')
-		}]
+	console.log('I am on create');
+/*
+	myPay.request('GetBalance', {}).then(function (result) {
+		console.log('log 01' + result);
+	}).catch(function (err) {
+		console.trace('log 01' + err);
+	});
+	*/
+
+	var query = {
+		'PAYMENTREQUEST_0_AMT': '20.00',
+		'PAYMENTREQUEST_0_CURRENCYCODE': 'USD',
+		'PAYMENTREQUEST_0_PAYMENTACTION': 'Sale',
+		'RETURNURL': 'http://test-express-checkout.herokuapp.com/execute',
+		'CANCELURL': 'http://test-express-checkout.herokuapp.com/cancel'
 	};
 
-	if (method === 'paypal') {
-		payment.payer.payment_method = 'paypal';
-		payment.redirect_urls = {
-			"return_url": "http://test-express-checkout.herokuapp.com/execute",
-			"cancel_url": "http://test-express-checkout.herokuapp.com/cancel"
-		};
-	} else if (method === 'credit_card') {
-		var funding_instruments = [
-			{
-				"credit_card": {
-					"type": req.param('type').toLowerCase(),
-					"number": req.param('number'),
-					"expire_month": req.param('expire_month'),
-					"expire_year": req.param('expire_year'),
-					"first_name": req.param('first_name'),
-					"last_name": req.param('last_name')
-				}
-			}
-		];
-		payment.payer.payment_method = 'credit_card';
-		payment.payer.funding_instruments = funding_instruments;
-	}
 
-	paypal.payment.create(payment, function (error, payment) {
-		if (error) {
-			console.log(error);
-			res.render('error', { 'error': error });
-		} else {
-			req.session.paymentId = payment.id;
-			res.render('create', { 'payment': payment });
-		}
+	myPay.request('SetExpressCheckout', query).then(function (result) {
+		console.log('log 02' + result);
+		req.session.paymentId = result.id;
+		res.render('viewDetail', { 'detail': result });
+		var token = result.param('token');
+		var query1 = { "TOKEN": token };
+
+		myPay.request('GetExpressCheckoutDetails', query1).then(function (result) {
+			console.log(result);
+			var payerId = req.param('PayerID');
+			var query2 = { "PAYERID": payerId };
+			res.render('viewDetail', { 'detail': result });
+		}).catch(function (err) {
+			console.trace(err);
+			res.render('error', { 'error': err });
+		});
+	}).catch(function (err) {
+		console.trace('log 02' + err);
+		res.render('error', { 'error': err });
 	});
-};
 
+};
 exports.execute = function (req, res) {
-	var paymentId = req.session.paymentId;
-	var payerId = req.param('PayerID');
+	var token = req.param('token');
+	var query = { "TOKEN": token };
 
-	var details = { "payer_id": payerId };
-	var payment = paypal.payment.execute(paymentId, details, function (error, payment) {
-		if (error) {
-			console.log(error);
-			res.render('error', { 'error': error });
-		} else {
-			res.render('execute', { 'payment': payment });
-		}
+	myPay.request('DoExpressCheckoutPayment', query).then(function (result) {
+		console.log(result);
+		res.render('execute', { 'payment': result });
+	}).catch(function (err) {
+		console.trace(err);
+		res.render('error', { 'error': err });
 	});
 };
-
 exports.cancel = function (req, res) {
-  res.render('cancel');
-};
-
-// Configuration
-
-exports.init = function (c) {
-	config = c;
-	paypal.configure(c.api);
+	res.render('cancel');
 };

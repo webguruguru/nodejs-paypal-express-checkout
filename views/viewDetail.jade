@@ -1,0 +1,8 @@
+extends layout
+block content
+    h1 View Results ...
+    - var description = JSON.stringify(detail, null, 2);
+    pre
+        p= description
+    a(href='/')
+        button Back
